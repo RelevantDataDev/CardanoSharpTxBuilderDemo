@@ -1,0 +1,113 @@
+﻿@page "/"
+@using CardanoSharp.Wallet.Extensions;
+@using CardanoSharpTxBuilderDemo.Shared;
+@using CardanoSharp.Blazor.Components;
+@using CardanoSharp.Blazor.Components.Enums;
+@using Newtonsoft.Json;
+@using System.Net;
+@using System.Text;
+@inject HttpClient _httpClient;
+
+
+<div class="center-screen" style="margin-top:-100px;">
+
+    <div class="connector">
+
+        <WalletConnector @ref="walletConnector"
+            OutputDebug="true"
+            PersistConnectedWallet="true"
+            HideCloseButton="false"
+            Layout="WalletConnectorLayout.List"
+            DisconnectOnConnectButtonClick="false"
+            AutoCloseOnConnect="true"
+            HideOnModalClick="ModalClickHideOptions.WhenConnected"
+            OnConnect="WalletConnected"
+            OnDisconnect="WalletDisconnected">
+        </WalletConnector>
+
+        <hr/>
+
+        <button class="btn" @onclick=BuildTransaction>Build Transaction: Nft Mint</button>
+
+    </div>
+
+</div>
+
+@code {
+
+    private WalletConnector? walletConnector;
+
+    private async Task BuildTransaction()
+    {
+        try
+        {
+            var txRequest = new BuildTxRequest
+                {
+                    WalletAddress = await GetUsedWalletAddress(),
+                    Label = $"Test-{DateTime.UtcNow.Ticks}"
+                };
+
+            var txResponse = await GetBuildResponse(txRequest);
+
+            var userSignTxResult = await WalletSignTx(txResponse.TxCborHex, true);
+
+            Console.WriteLine();
+
+            // If we got here and the wallet had displayed the transaction as expected,
+            // then we are ready to move onto sending the signing witness back up to the server to be signed there.
+            // and then once more returned here to be submitted.
+        }
+        catch (Exception err)
+        {
+            Console.WriteLine(err.Message);
+        }
+    }
+
+    private async Task<BuildTxResponse> GetBuildResponse(BuildTxRequest request)
+    {
+        var txRequest = JsonConvert.SerializeObject(request);
+
+        var response = await _httpClient.PostAsync("tx/build", new StringContent(txRequest, Encoding.UTF8, "application/json"));
+
+        if (response.StatusCode != HttpStatusCode.OK) { throw new Exception("Failed to fetch data from server."); }
+
+        var result = await response.Content.ReadAsStringAsync();
+
+        return JsonConvert.DeserializeObject<BuildTxResponse>(result) ?? new BuildTxResponse();
+    }
+
+    private async Task<string> GetUsedWalletAddress()
+    {
+        if (walletConnector != null && walletConnector.Initialized)
+        {
+            if (walletConnector.Connected)
+            {
+                var addresses = await walletConnector.GetUsedAddresses();
+
+                return addresses?.FirstOrDefault()?.ToStringHex() ?? string.Empty;
+            }
+        }
+
+        return string.Empty;
+    }
+
+    private async Task<string> WalletSignTx(string txCborHex, bool partialSign = false)
+    {
+        return await walletConnector!.SignTxCbor(txCborHex, partialSign);
+    }
+
+    private async Task<string> WalletSubmitTx(string txCborHex)
+    {
+        return await walletConnector!.SubmitTxCbor(txCborHex);
+    }
+
+    private async Task WalletConnected()
+    {
+        await Task.FromResult(0);
+    }
+
+    private async Task WalletDisconnected()
+    {
+        await Task.FromResult(0);
+    }
+}

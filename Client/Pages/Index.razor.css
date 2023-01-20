@@ -1,0 +1,23 @@
+﻿.center-screen {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    min-height: 100vh;
+}
+
+.btn {
+    width: 300px;
+    height: 40px;
+    border-radius: 3px;
+    font-size: large;
+    color: rgb(50,50,50);
+    background-color: rgb(200,200,200);
+}
+
+.connector {
+    display: block;
+    background-color: rgb(60,60,60);
+    padding: 20px;
+    border-radius: 3px;
+}
