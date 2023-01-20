@@ -1,5 +1,7 @@
 ﻿@page "/"
 @using CardanoSharp.Wallet.Extensions;
+@using CardanoSharp.Wallet.Models.Addresses;
+@using CardanoSharpTxBuilderDemo.Client.Components
 @using CardanoSharpTxBuilderDemo.Shared;
 @using CardanoSharp.Blazor.Components;
 @using CardanoSharp.Blazor.Components.Enums;
@@ -7,11 +9,12 @@
 @using System.Net;
 @using System.Text;
 @inject HttpClient _httpClient;
+@inject IJSRuntime jsRuntime
 
 
 <div class="center-screen" style="margin-top:-100px;">
 
-    <div class="connector">
+    <div class="connector @Waiting">
 
         <WalletConnector @ref="walletConnector"
             OutputDebug="true"
@@ -27,7 +30,22 @@
 
         <hr/>
 
-        <button class="btn" @onclick=BuildTransaction>Build Transaction: Nft Mint</button>
+        <button class="btn" @onclick=MintAnNft>User Mints an NFT</button>
+
+        <hr/>
+
+        <button class="btn" @onclick=PaySomeAda>User Pays Some ₳</button>
+        
+        <hr/>
+
+        <div id="msgs" class="txMsgs">
+            @foreach (var result in TransactionResults)
+            {
+                <div class="txMsg">
+                    <TxResultComponent Result=@result />
+                </div>
+            }
+        </div>
 
     </div>
 
@@ -37,46 +55,150 @@
 
     private WalletConnector? walletConnector;
 
-    private async Task BuildTransaction()
+    private List<TxResult> TransactionResults { get; set; } = new List<TxResult>();
+
+    private string Waiting { get; set; } = string.Empty;
+
+    #region PAGE METHODS
+
+    private async Task AddTransactionMessage(TxKind kind, string message)
     {
+        TransactionResults.Insert(0, new TxResult
+        {
+            Kind = kind,
+            Message = message
+        });
+
+        await jsRuntime.InvokeVoidAsync("scrollToTop", "msgs");
+    }
+
+    private void IsWaiting(bool waiting)
+    {
+        Waiting = waiting ? "waiting" : string.Empty;
+    }
+
+    private async Task PaySomeAda()
+    {
+        IsWaiting(true);
+
         try
         {
-            var txRequest = new BuildTxRequest
+            var txRequest = new TxRequestPay
                 {
-                    WalletAddress = await GetUsedWalletAddress(),
-                    Label = $"Test-{DateTime.UtcNow.Ticks}"
+                    WalletAddress = (await GetUsedWalletAddress()).ToString(),
+                    AmountInLovelace = 10000000
                 };
 
-            var txResponse = await GetBuildResponse(txRequest);
+            var txCborHex = await GetBuildResponse_Pay(txRequest);
 
-            var userSignTxResult = await WalletSignTx(txResponse.TxCborHex, true);
+            var userSignTxResult = await WalletSignTx(txCborHex, true);
 
-            Console.WriteLine();
+            var txCborHexSigned = await GetSignResponse(txCborHex, userSignTxResult);
 
-            // If we got here and the wallet had displayed the transaction as expected,
-            // then we are ready to move onto sending the signing witness back up to the server to be signed there.
-            // and then once more returned here to be submitted.
+            var txHash = await WalletSubmitTx(txCborHexSigned);
+
+            await AddTransactionMessage(TxKind.Payment, 
+                $"Payment successful! Your transaction hash is:<br/><a href=\"https://preprod.cardanoscan.io/transaction/{txHash}\" target=\"_blank\">{txHash}</a>");
+
+            StateHasChanged();
         }
         catch (Exception err)
         {
-            Console.WriteLine(err.Message);
+            await AddTransactionMessage(TxKind.Error,
+                $"({err.GetType().Name}) {err.Message}");
         }
+
+        IsWaiting(false);
     }
 
-    private async Task<BuildTxResponse> GetBuildResponse(BuildTxRequest request)
+    private async Task MintAnNft()
+    {
+        IsWaiting(true);
+
+        try
+        {
+            var txRequest = new TxRequestMint
+                {
+                    WalletAddress = (await GetUsedWalletAddress()).ToStringHex(),
+                    Label = $"Test-{DateTime.UtcNow.Ticks}"
+                };
+
+            var txCborHex = await GetBuildResponse_Mint(txRequest);
+
+            var userSignature = await WalletSignTx(txCborHex, true);
+
+            var txCborHexSigned = await GetSignResponse(txCborHex, userSignature);
+
+            var txHash = await WalletSubmitTx(txCborHexSigned);
+
+            await AddTransactionMessage(TxKind.Payment,
+                $"Mint successful! Your transaction hash is:<br/><a href=\"https://preprod.cardanoscan.io/transaction/{txHash}\">{txHash}</a>");
+
+            StateHasChanged();
+        }
+        catch (Exception err)
+        {
+            await AddTransactionMessage(TxKind.Error,
+                $"({err.GetType().Name}) {err.Message}");
+        }
+
+        IsWaiting(false);
+    }
+
+    #endregion
+
+
+    #region WEB METHODS
+
+    private async Task<string> GetBuildResponse_Pay(TxRequestPay request)
     {
         var txRequest = JsonConvert.SerializeObject(request);
 
-        var response = await _httpClient.PostAsync("tx/build", new StringContent(txRequest, Encoding.UTF8, "application/json"));
+        var response = await _httpClient.PostAsync("tx/build/pay", new StringContent(txRequest, Encoding.UTF8, "application/json"));
 
         if (response.StatusCode != HttpStatusCode.OK) { throw new Exception("Failed to fetch data from server."); }
 
         var result = await response.Content.ReadAsStringAsync();
 
-        return JsonConvert.DeserializeObject<BuildTxResponse>(result) ?? new BuildTxResponse();
+        return result ?? string.Empty;
     }
 
-    private async Task<string> GetUsedWalletAddress()
+    private async Task<string> GetBuildResponse_Mint(TxRequestMint request)
+    {
+        var txRequest = JsonConvert.SerializeObject(request);
+
+        var response = await _httpClient.PostAsync("tx/build/mint", new StringContent(txRequest, Encoding.UTF8, "application/json"));
+
+        if (response.StatusCode != HttpStatusCode.OK) { throw new Exception("Failed to fetch data from server."); }
+
+        var result = await response.Content.ReadAsStringAsync();
+
+        return JsonConvert.DeserializeObject<string>(result) ?? string.Empty;
+    }
+
+    private async Task<string> GetSignResponse(string txCborHex, string userSignature)
+    {
+        var txRequest = JsonConvert.SerializeObject(new TxRequestSign
+        {
+            TxCborHex = txCborHex,
+            Witness = userSignature
+        });
+
+        var response = await _httpClient.PostAsync("tx/sign", new StringContent(txRequest, Encoding.UTF8, "application/json"));
+
+        if (response.StatusCode != HttpStatusCode.OK) { throw new Exception("Failed to fetch data from server."); }
+
+        var result = await response.Content.ReadAsStringAsync();
+
+        return result ?? string.Empty;
+    }
+
+    #endregion
+
+
+    #region WALLET METHODS
+
+    private async Task<Address> GetUsedWalletAddress()
     {
         if (walletConnector != null && walletConnector.Initialized)
         {
@@ -84,11 +206,11 @@
             {
                 var addresses = await walletConnector.GetUsedAddresses();
 
-                return addresses?.FirstOrDefault()?.ToStringHex() ?? string.Empty;
+                return addresses?.FirstOrDefault() ?? new Address();
             }
         }
 
-        return string.Empty;
+        return new Address();
     }
 
     private async Task<string> WalletSignTx(string txCborHex, bool partialSign = false)
@@ -101,13 +223,22 @@
         return await walletConnector!.SubmitTxCbor(txCborHex);
     }
 
+    #endregion
+
+
+    #region WALLET EVENT HANDLERS
+
     private async Task WalletConnected()
     {
-        await Task.FromResult(0);
+        var networkType = await walletConnector!.GetNetworkType();
+
+        await AddTransactionMessage(TxKind.None, $"Connected to wallet on {networkType}.");
     }
 
     private async Task WalletDisconnected()
     {
-        await Task.FromResult(0);
+        await AddTransactionMessage(TxKind.None, $"Diconnected from wallet.");
     }
+
+    #endregion
 }

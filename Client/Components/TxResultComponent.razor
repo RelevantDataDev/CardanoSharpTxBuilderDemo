@@ -1,0 +1,44 @@
+﻿@using CardanoSharpTxBuilderDemo.Shared;
+
+<div class="outer">
+    <div class="icon">
+        <img src="@ImageUrl" height="30"/>
+    </div>
+    <div class="msg">
+        @(new MarkupString(Result.Message))
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public TxResult Result { get; set; } = new TxResult();
+
+    private string ImageUrl = string.Empty;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        ImageUrl = await GetImageUrl(Result.Kind);
+    }
+
+    private async Task<string> GetImageUrl(TxKind kind)
+    {
+        var result = string.Empty;
+
+        switch (kind)
+        {
+            case TxKind.Payment :
+                result = "images/check.png";
+                break;
+            case TxKind.Mint:
+                result = "images/nft.png";
+                break;
+            case TxKind.Error:
+                result = "images/error.png";
+                break;
+            default:break;
+        }
+
+        return await Task.FromResult(result);
+    }
+
+}

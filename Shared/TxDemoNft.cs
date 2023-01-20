@@ -1,6 +1,6 @@
 ﻿namespace CardanoSharpTxBuilderDemo.Shared
 {
-    public class TxBuilderNft
+    public class TxDemoNft
     {
         public string Title { get; set; } = string.Empty;
         public string AssetName { get; set; } = string.Empty;

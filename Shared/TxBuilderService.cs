@@ -17,7 +17,8 @@ namespace CardanoSharpTxBuilderDemo.Shared
 {
     public interface ITxBuilderService
     {
-        Task<Transaction?> BuildTxMint(TxBuilderNft nft);
+        Task<Transaction?> BuildTxPay(TxRequestPay payment);
+        Task<Transaction?> BuildTxMint(TxDemoNft nft);
         Task<Transaction?> BuildTxSign(string txCborHex, string witness);
     }
 
@@ -35,10 +36,83 @@ namespace CardanoSharpTxBuilderDemo.Shared
             _networkClient = networkClient;
             _epochClient = epochClient;
             _policyManager = policyManager;
-            _sendPaymentToAddress = "addr_test1qq7ugpl93cwacef49edp044va3qr3md5hwd6w9qsr4yvpuuf8w9sm944ty0tz0jvexkdnxsjmgq7w9my4wj8a3wgj64qeqnp56";
+            _sendPaymentToAddress = "addr_test1qp8x9c0j7zln32fsa7sws3x0s5heu3mz0j08935lkyc6msj8g9w84yjdj2fnrsq2725vvsacw23lay5xqt4wr46fhscqdlrzcz";
         }
 
-        public async Task<Transaction?> BuildTxMint(TxBuilderNft nft)
+        public async Task<Transaction?> BuildTxPay(TxRequestPay payment)
+        {
+            // Address making the payment
+            var senderAddress = new Address(payment.WalletAddress);
+
+            // Address receiving the payment
+            var receiverAddress = new Address(_sendPaymentToAddress);
+
+            //1. Get UTxOs
+            var utxos = await GetUtxos(senderAddress.ToString());
+
+            ///2. Create the Body
+            var transactionBody = TransactionBodyBuilder.Create;
+
+            //set payment outputs
+            transactionBody.AddOutput(_sendPaymentToAddress.ToAddress().GetBytes(), (ulong) payment.AmountInLovelace);
+
+            //perform coin selection
+            var coinSelection = ((TransactionBodyBuilder)transactionBody).UseRandomImprove(utxos, senderAddress.ToString());
+
+            //add the inputs from coin selection to transaction body builder
+            AddInputsFromCoinSelection(coinSelection, transactionBody);
+
+            //if we have change from coin selection, add to outputs
+            if (coinSelection.ChangeOutputs is not null && coinSelection.ChangeOutputs.Any())
+            {
+                AddChangeOutputs(transactionBody, coinSelection.ChangeOutputs, senderAddress.ToString());
+            }
+
+            //get protocol parameters and set default fee
+            var ppResponse = await _epochClient.GetProtocolParameters();
+            var protocolParameters = ppResponse.Content.FirstOrDefault();
+            protocolParameters.MinFeeB = 155381;
+            protocolParameters.MinFeeA = 44;
+
+            transactionBody.SetFee(protocolParameters.MinFeeB.Value);
+
+            //get network tip and set ttl
+            var blockSummaries = (await _networkClient.GetChainTip()).Content;
+            var ttl = 2500 + (uint)blockSummaries.First().AbsSlot;
+            transactionBody.SetTtl(ttl);
+
+            ///3. Mock Witnesses
+            var witnessSet = TransactionWitnessSetBuilder.Create
+                .MockVKeyWitness(2);
+
+            ///4. Build Draft TX
+            //create transaction builder and add the pieces
+            var transaction = TransactionBuilder.Create;
+            transaction.SetBody(transactionBody);
+            transaction.SetWitnesses(witnessSet);
+
+            //get a draft transaction to calculate fee
+            var draft = transaction.Build();
+            var fee = draft.CalculateFee(protocolParameters.MinFeeA, protocolParameters.MinFeeB);
+
+            //update fee and change output
+            transactionBody.SetFee(fee);
+            transactionBody.RemoveFeeFromChange();
+
+            var rawTx = transaction.Build();
+
+            //remove mock witness
+            var mockWitnesses = rawTx.TransactionWitnessSet.VKeyWitnesses.Where(x => x.IsMock);
+
+            foreach (var mw in mockWitnesses)
+            {
+                rawTx.TransactionWitnessSet.VKeyWitnesses.Remove(mw);
+            }
+
+            return rawTx;
+        }
+
+        public async Task<Transaction?> BuildTxMint(TxDemoNft nft)
         {
             //0. Prep
             var address = new Address(nft.MintWallet.HexToByteArray());
@@ -126,6 +200,11 @@ namespace CardanoSharpTxBuilderDemo.Shared
         {
             var transaction = txCborHex.HexToByteArray().DeserializeTransaction();
             var vKeyWitnesses = witness.HexToByteArray().DeserializeTransactionWitnessSet();
+
+            if(transaction.TransactionWitnessSet == null)
+            {
+                transaction.TransactionWitnessSet = new TransactionWitnessSet();
+            }
 
             foreach (var vkeyWitness in vKeyWitnesses.VKeyWitnesses)
             {
@@ -217,7 +296,7 @@ namespace CardanoSharpTxBuilderDemo.Shared
             }
         }
 
-        private Dictionary<string, object> GetMetadata(TxBuilderNft nft)
+        private Dictionary<string, object> GetMetadata(TxDemoNft nft)
         {
             var file = new
             {

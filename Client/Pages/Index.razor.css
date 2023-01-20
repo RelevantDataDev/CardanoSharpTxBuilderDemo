@@ -12,12 +12,41 @@
     border-radius: 3px;
     font-size: large;
     color: rgb(50,50,50);
-    background-color: rgb(200,200,200);
+    background-color: rgb(222,222,222);
 }
 
 .connector {
     display: block;
-    background-color: rgb(60,60,60);
+    background-color: rgb(65,65,65);
     padding: 20px;
-    border-radius: 3px;
+    border-radius: 5px;
+}
+
+.txMsgs {
+    width: 350px;
+    height: 135px;
+    overflow-y: scroll;
+    padding-right: 5px;
+}
+
+.waiting {
+    pointer-events: none;
+    opacity:0.3;
+}
+
+/* width */
+::-webkit-scrollbar {
+    width: 12px;
+}
+
+/* Track */
+::-webkit-scrollbar-track {
+    box-shadow: inset 0 0 2px grey;
+    border-radius: 5px;
+}
+
+/* Handle */
+::-webkit-scrollbar-thumb {
+    background-color: rgba(2,2,2,0.2);
+    border-radius: 5px;
 }
