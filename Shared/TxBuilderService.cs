@@ -115,11 +115,11 @@ namespace CardanoSharpTxBuilderDemo.Shared
         public async Task<Transaction?> BuildTxMint(TxDemoNft nft)
         {
             //0. Prep
-            var address = new Address(nft.MintWallet.HexToByteArray());
+            var minterAddress = new Address(nft.MintWallet);
             var scriptPolicy = _policyManager.GetPolicyScript();
 
             //1. Get UTxOs
-            var utxos = await GetUtxos(address.ToString());
+            var utxos = await GetUtxos(minterAddress.ToString());
 
             ///2. Create the Body
             var transactionBody = TransactionBodyBuilder.Create;
@@ -131,11 +131,11 @@ namespace CardanoSharpTxBuilderDemo.Shared
             var policyId = scriptPolicy.Build().GetPolicyId();
             ITokenBundleBuilder tbb = TokenBundleBuilder.Create
                 .AddToken(policyId, nft.Title.ToBytes(), 1);
-            transactionBody.AddOutput(address.GetBytes(), 2000000, tbb, outputPurpose: OutputPurpose.Mint);
+            transactionBody.AddOutput(minterAddress.GetBytes(), 2000000, tbb, outputPurpose: OutputPurpose.Mint);
             transactionBody.SetMint(tbb);
 
             //perform coin selection
-            var coinSelection = ((TransactionBodyBuilder)transactionBody).UseRandomImprove(utxos, address.ToString(), tbb);
+            var coinSelection = ((TransactionBodyBuilder)transactionBody).UseRandomImprove(utxos, minterAddress.ToString(), tbb);
 
             //add the inputs from coin selection to transaction body builder
             AddInputsFromCoinSelection(coinSelection, transactionBody);
@@ -143,7 +143,7 @@ namespace CardanoSharpTxBuilderDemo.Shared
             //if we have change from coin selection, add to outputs
             if (coinSelection.ChangeOutputs is not null && coinSelection.ChangeOutputs.Any())
             {
-                AddChangeOutputs(transactionBody, coinSelection.ChangeOutputs, address.ToString());
+                AddChangeOutputs(transactionBody, coinSelection.ChangeOutputs, minterAddress.ToString());
             }
 
             //get protocol parameters and set default fee
