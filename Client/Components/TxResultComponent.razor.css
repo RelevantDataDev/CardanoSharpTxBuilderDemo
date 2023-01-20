@@ -1,0 +1,29 @@
+﻿
+.outer {
+    border-radius: 5px;
+    border-width: 1px;
+    border-color: rgb(50,50,50);
+    border-style: solid;
+    padding: 5px;
+    overflow: hidden;
+    width: 100%;
+    display: inline-flex;
+    background-color: rgb(20,20,20);
+    margin-top:3px;
+}
+
+.icon {
+    border-radius: 3px;
+    padding-top: 5px;
+}
+
+
+.msg {
+    font-size: small;
+    color: white;
+    text-align: left;
+    padding-left: 10px;
+    text-overflow: ellipsis;
+    overflow-x: clip;
+}
+

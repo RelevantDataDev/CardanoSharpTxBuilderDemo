@@ -1,6 +1,6 @@
 ﻿namespace CardanoSharpTxBuilderDemo.Shared
 {
-    public class BuildTxRequest
+    public class TxRequestMint
     {
         public string WalletAddress { get; set; } = string.Empty;
 
