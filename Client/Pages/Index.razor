@@ -119,7 +119,7 @@
         {
             var txRequest = new TxRequestMint
                 {
-                    WalletAddress = (await GetUsedWalletAddress()).ToStringHex(),
+                    WalletAddress = (await GetUsedWalletAddress()).ToString(),
                     Label = $"Test-{DateTime.UtcNow.Ticks}"
                 };
 
@@ -173,7 +173,7 @@
 
         var result = await response.Content.ReadAsStringAsync();
 
-        return JsonConvert.DeserializeObject<string>(result) ?? string.Empty;
+        return result ?? string.Empty;
     }
 
     private async Task<string> GetSignResponse(string txCborHex, string userSignature)
