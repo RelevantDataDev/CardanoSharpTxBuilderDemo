@@ -6,11 +6,12 @@ The idea is to build out all the various ways you might want to use the CardanoS
 
 - The main guts of the app live in the Index.razor file of the client project, the TxBuilder class of the Shared project, and the TxBuilderEndpoint of the Server project.
 
-- So far just implementing the first attempt at a minting transaction that is based upon the NftSaleDemo app created by Kyle from CardanoSharp.
+- So far have "User pays ADA" and "user mints NFT"
 
- - Currently everything goes great until the wallet opens up for signing. In Eternl the transaction preview is missing, and in Nami there is an error message from the wallet: "Inputs do not conform to this spec or are otherwise invalid.
+ - Currently everything goes great for Usermakes payment.
+ - For minting nft the wallet opens up for signing, but in Eternl the transaction preview is missing, and in Nami there is an error message from the wallet: "Inputs do not conform to this spec or are otherwise invalid.
 
-Steps to reproduce:
+Steps to reproduce user Mints NFT issue:
 ---------------------
 #1: Run the app
 
@@ -22,4 +23,4 @@ Steps to reproduce:
 
 #5: Set a breakpoint in Index.razor where the wallet signing call occurs: (var userSignTxResult = await WalletSignTx(txResponse.TxCborHex, true);)
 
-#6: Click the "Build Transaction: Nft Mint" button.
+#6: Click the "User Mints NFT" button.
