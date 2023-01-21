@@ -12,6 +12,11 @@ using Microsoft.Extensions.Configuration;
 using CardanoSharp.Wallet.CIPs.CIP2;
 using CardanoSharp.Wallet.Extensions.Models.Transactions;
 using CardanoSharp.Wallet.Extensions.Models.Transactions.TransactionWitnesses;
+using Newtonsoft.Json;
+using CardanoSharp.Wallet.Models.Keys;
+using System.Dynamic;
+using PeterO.Cbor2;
+using Newtonsoft.Json.Linq;
 
 namespace CardanoSharpTxBuilderDemo.Shared
 {
@@ -188,10 +193,14 @@ namespace CardanoSharpTxBuilderDemo.Shared
 
             var rawTx = transaction.Build();
 
+            var md = JsonConvert.SerializeObject(rawTx.AuxiliaryData.Metadata);
+
             //remove mock witness
             var mockWitnesses = rawTx.TransactionWitnessSet.VKeyWitnesses.Where(x => x.IsMock);
             foreach (var mw in mockWitnesses)
+            {
                 rawTx.TransactionWitnessSet.VKeyWitnesses.Remove(mw);
+            }
 
             return rawTx;
         }
@@ -296,46 +305,37 @@ namespace CardanoSharpTxBuilderDemo.Shared
             }
         }
 
-        private Dictionary<string, object> GetMetadata(TxDemoNft nft)
+        private Dictionary<string, Dictionary<string, object>> GetMetadata(TxDemoNft nft)
         {
-            var file = new
+            var files = new object[] 
             {
-                name = $"{nft.AssetName} Icon",
-                mediaType = "image/png",
-                src = nft.ImageUrl
+                new
+                {
+                    name = $"{nft.AssetName} Icon",
+                    mediaType = "image/png",
+                    src = nft.ImageUrl
+                }
             };
 
-            var fileElement = new List<object>() { file };
-
-            var assetElement = new Dictionary<string, object>()
+            var policyElement = new Dictionary<string, Dictionary<string, object>>
             {
-                {
-                    Encoding.ASCII.GetBytes($"{nft.AssetName} {nft.Title}").ToStringHex(),
-                    new
+                { 
+                    nft.PolicyId,
+                    new Dictionary<string, object>
                     {
-                        name = nft.AssetName,
-                        image = nft.ImageUrl,
-                        mediaType = "image/png",
-                        files = fileElement,
-                        serialNum = $"{nft.Title}-{nft.MintDateUTC.Ticks}",
-                        rarity = nft.Title
+                        { 
+                                nft.Title, new MetaDataInfo{
+                                name = nft.AssetName,
+                                image = nft.ImageUrl,
+                                mediaType = "image/png",
+                                files = files,
+                                serialNum = $"{nft.Title}-{nft.MintDateUTC.Ticks}",
+                                rarity = nft.Title
+                            }
+                        }
                     }
                 }
             };
-
-            var policyElement = new Dictionary<string, object>()
-            {
-                {
-                    nft.PolicyId, assetElement
-                }
-            };
-
-            // return new Dictionary<string, object>()
-            // {
-            //     {
-            //         "721", policyElement
-            //     }
-            // };
 
             return policyElement;
         }
