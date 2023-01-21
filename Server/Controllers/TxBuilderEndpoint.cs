@@ -1,5 +1,6 @@
 ﻿using CardanoSharp.Wallet.Extensions;
 using CardanoSharp.Wallet.Extensions.Models.Transactions;
+using CardanoSharpTxBuilderDemo.Server.Services;
 using CardanoSharpTxBuilderDemo.Shared;
 using Microsoft.AspNetCore.Mvc;
 

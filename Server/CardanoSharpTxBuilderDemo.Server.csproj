@@ -7,8 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CardanoSharp.Blazor.Components" Version="3.0.2" />
     <PackageReference Include="CardanoSharp.Koios.Client" Version="1.0.10" />
+    <PackageReference Include="CardanoSharp.Wallet" Version="4.0.5" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="6.0.11" />
   </ItemGroup>
 

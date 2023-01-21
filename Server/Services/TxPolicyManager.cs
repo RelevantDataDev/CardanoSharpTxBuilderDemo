@@ -7,7 +7,7 @@ using CardanoSharp.Wallet.TransactionBuilding;
 using CardanoSharp.Wallet.Utilities;
 using Microsoft.Extensions.Configuration;
 
-namespace CardanoSharpTxBuilderDemo.Shared
+namespace CardanoSharpTxBuilderDemo.Server.Services
 {
     public interface ITxPolicyManager
     {

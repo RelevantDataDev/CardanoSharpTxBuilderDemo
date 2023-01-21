@@ -17,8 +17,9 @@ using CardanoSharp.Wallet.Models.Keys;
 using System.Dynamic;
 using PeterO.Cbor2;
 using Newtonsoft.Json.Linq;
+using CardanoSharpTxBuilderDemo.Shared;
 
-namespace CardanoSharpTxBuilderDemo.Shared
+namespace CardanoSharpTxBuilderDemo.Server.Services
 {
     public interface ITxBuilderService
     {

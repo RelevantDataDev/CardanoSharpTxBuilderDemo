@@ -1,6 +1,5 @@
 using CardanoSharp.Koios.Client;
-using CardanoSharpTxBuilderDemo.Shared;
-using Microsoft.AspNetCore.ResponseCompression;
+using CardanoSharpTxBuilderDemo.Server.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 

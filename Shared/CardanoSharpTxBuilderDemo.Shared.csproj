@@ -7,20 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CardanoSharp.Wallet" Version="4.0.5" />
-    <PackageReference Include="Refit" Version="6.3.2" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Reference Include="CardanoSharp.Koios.Client">
-      <HintPath>..\..\..\..\Users\Dylan\.nuget\cardanosharp.koios.client\1.0.10\lib\netstandard2.0\CardanoSharp.Koios.Client.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Extensions.Configuration.Abstractions">
-      <HintPath>..\..\..\..\Users\Dylan\.nuget\microsoft.extensions.configuration.abstractions\6.0.0\lib\netstandard2.0\Microsoft.Extensions.Configuration.Abstractions.dll</HintPath>
-    </Reference>
-  </ItemGroup>
-
-  <ItemGroup>
     <SupportedPlatform Include="browser" />
   </ItemGroup>
 </Project>
